@@ -3,9 +3,10 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.ticker as mtick
 import os
 
-# Load forecast data
+# === Load Forecast Data ===
 @st.cache_data
 def load_data():
     csv_path = "Total_Forecast.csv"
@@ -14,32 +15,24 @@ def load_data():
         st.error(f"❌ File not found: {csv_path}")
         st.stop()
 
-    # Load without parsing to handle column cleanup first
     df = pd.read_csv(csv_path)
-
-    # Strip leading/trailing spaces from column names
     df.columns = df.columns.str.strip()
-
-    # Parse the 'Date' column after fixing column names
     df["Date"] = pd.to_datetime(df["Date"])
 
-    # Rename CI columns for consistent internal use
     df.rename(columns={
         "CI Lower (30%)": "lower",
         "CI Upper (30%)": "upper"
     }, inplace=True)
 
-    # Optional: Add a 'Type' field (Forecast vs Expenses) based on Villa name
     df["Type"] = df["Villa"].apply(lambda x: "Expense" if "Expense" in x else "Forecast")
     df["Villa"] = df["Villa"].str.replace(" Expenses", "", regex=False)
 
     return df
 
-# Load the cleaned dataset
+# === Load Data
 df = load_data()
 
-
-# Sidebar Filters
+# === Sidebar Filters
 villa_list = df["Villa"].unique()
 selected_villa = st.sidebar.selectbox("Select Villa", sorted(villa_list))
 
@@ -47,40 +40,70 @@ chart_type = st.sidebar.radio("Chart Type", ["Line Forecast", "Bar Forecast", "T
 metric = st.sidebar.radio("Metric", ["Forecast", "lower", "upper"])
 show_ci = st.sidebar.checkbox("Show Confidence Interval", value=True)
 
-# Villa-Specific Data
+# === Filtered Data
 villa_df = df[df["Villa"] == selected_villa].sort_values("Date")
 
-# Page Title
+# === Page Header
 st.title("12-Month Forecast Dashboard")
 st.subheader(f"{selected_villa} – {villa_df['Type'].iloc[0]}")
 
-# Visualization
+# === Formatter: Millions of Rupiah
+def format_million(x, pos):
+    return f'Rp {int(x / 1e6):,}M'.replace(",", ".")
+
+# === Visualization
 if chart_type == "Line Forecast":
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.plot(villa_df["Date"], villa_df["Forecast"], label="Forecast", color="lime")
+    fig, ax = plt.subplots(figsize=(12, 6))
+    fig.patch.set_facecolor('#0a192f')
+    ax.set_facecolor('#0a192f')
+
+    ax.plot(villa_df["Date"], villa_df["Forecast"], label="Forecast", color="lime", linestyle="--", marker='o')
 
     if show_ci:
         ax.fill_between(
             villa_df["Date"],
             villa_df["lower"],
             villa_df["upper"],
-            alpha=0.3,
+            alpha=0.2,
             color="lime",
-            label="±30% CI"
+            label="Confidence Interval (±30%)"
         )
 
-    ax.set_title("Forecast with Confidence Interval")
-    ax.set_ylabel("Amount (Rp)")
-    ax.grid(True, linestyle="--", alpha=0.6)
+    ax.set_title(f"{selected_villa} – 12-Month Forecast", color='white')
+    ax.set_ylabel("Revenue", color='white')
+    ax.set_xlabel("Date", color='white')
+    ax.grid(True, linestyle='--', linewidth=0.7, alpha=0.5, color='white')
+    ax.yaxis.set_major_formatter(mtick.FuncFormatter(format_million))
+
+    for spine in ax.spines.values():
+        spine.set_color('white')
+    ax.tick_params(colors='white')
     ax.tick_params(axis="x", rotation=45)
+
+    legend = ax.legend(loc="upper left", facecolor='#0a192f', edgecolor='white')
+    for text in legend.get_texts():
+        text.set_color("white")
+
     st.pyplot(fig)
 
 elif chart_type == "Bar Forecast":
-    fig, ax = plt.subplots(figsize=(10, 5))
+    fig, ax = plt.subplots(figsize=(12, 6))
+    fig.patch.set_facecolor('#0a192f')
+    ax.set_facecolor('#0a192f')
+
     ax.bar(villa_df["Date"], villa_df[metric], color="skyblue")
-    ax.set_title(f"{metric} over Time")
-    ax.set_ylabel("Amount (Rp)")
+
+    ax.set_title(f"{metric.capitalize()} over Time", color='white')
+    ax.set_ylabel("Revenue", color='white')
+    ax.set_xlabel("Date", color='white')
+    ax.grid(True, linestyle='--', linewidth=0.7, alpha=0.5, color='white')
+    ax.yaxis.set_major_formatter(mtick.FuncFormatter(format_million))
+
+    for spine in ax.spines.values():
+        spine.set_color('white')
+    ax.tick_params(colors='white')
     ax.tick_params(axis="x", rotation=45)
+
     st.pyplot(fig)
 
 else:
@@ -93,4 +116,3 @@ else:
             "upper": "Rp {:,.0f}"
         })
     )
-
