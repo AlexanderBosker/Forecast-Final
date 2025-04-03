@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 # Load forecast data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("master_forecast_14_villas.csv", parse_dates=["Date"])
+    df = pd.read_csv("Total Forecast.csv", parse_dates=["Date"])
     return df
 
 df = load_data()
