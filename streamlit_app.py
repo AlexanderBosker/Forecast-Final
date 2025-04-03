@@ -3,21 +3,28 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
-# Load forecast data
 @st.cache_data
 def load_data():
-    df = pd.read_csv("Total_Forecast.csv", parse_dates=["Date"])
+    csv_path = "Total_Forecast.csv"
+    
+    st.write("Checking for file:", csv_path)
+    if not os.path.exists(csv_path):
+        st.error(f"File not found: {csv_path}")
+        st.stop()
 
-    # Standardize column names
+    with open(csv_path, "rb") as f:
+        header = f.read(500)
+    st.write("File starts with (first 500 bytes):", header[:300])  # Partial preview
+
+    df = pd.read_csv(csv_path, parse_dates=["Date"])
     df.rename(columns={
         "CI Lower (30%)": "lower",
         "CI Upper (30%)": "upper"
     }, inplace=True)
-
-    # Add Type column if missing
     if "Type" not in df.columns:
-        df["Type"] = "Forecast"  # Placeholder – adjust if you want to split Forecast vs Expenses
+        df["Type"] = "Forecast"
 
     return df
 
