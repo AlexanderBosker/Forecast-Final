@@ -25,7 +25,6 @@ def load_data():
     }, inplace=True)
 
     df["Type"] = df["Villa"].apply(lambda x: "Expense" if "Expense" in x else "Forecast")
-    df["Villa"] = df["Villa"].str.replace(" Expenses", "", regex=False)
 
     return df
 
