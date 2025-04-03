@@ -5,30 +5,39 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
+# Load forecast data
 @st.cache_data
 def load_data():
     csv_path = "Total_Forecast.csv"
-    
-    st.write("Checking for file:", csv_path)
+
     if not os.path.exists(csv_path):
-        st.error(f"File not found: {csv_path}")
+        st.error(f"❌ File not found: {csv_path}")
         st.stop()
 
-    with open(csv_path, "rb") as f:
-        header = f.read(500)
-    st.write("File starts with (first 500 bytes):", header[:300])  # Partial preview
+    # Load without parsing to handle column cleanup first
+    df = pd.read_csv(csv_path)
 
-    df = pd.read_csv(csv_path, parse_dates=["Date"])
+    # Strip leading/trailing spaces from column names
+    df.columns = df.columns.str.strip()
+
+    # Parse the 'Date' column after fixing column names
+    df["Date"] = pd.to_datetime(df["Date"])
+
+    # Rename CI columns for consistent internal use
     df.rename(columns={
         "CI Lower (30%)": "lower",
         "CI Upper (30%)": "upper"
     }, inplace=True)
-    if "Type" not in df.columns:
-        df["Type"] = "Forecast"
+
+    # Optional: Add a 'Type' field (Forecast vs Expenses) based on Villa name
+    df["Type"] = df["Villa"].apply(lambda x: "Expense" if "Expense" in x else "Forecast")
+    df["Villa"] = df["Villa"].str.replace(" Expenses", "", regex=False)
 
     return df
 
+# Load the cleaned dataset
 df = load_data()
+
 
 # Sidebar Filters
 villa_list = df["Villa"].unique()
